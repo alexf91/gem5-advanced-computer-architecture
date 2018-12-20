@@ -15,7 +15,20 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .runner import *
-from .basepredictor import *
-from .utils import *
-from .local2bit import *
+__all__ = ('SaturatingCounter', )
+
+
+class SaturatingCounter(object):
+    value = property(lambda self: self._value)
+
+    def __init__(self, minval, maxval, init=None):
+        assert init is None or minval <= init <= maxval
+        self._minval = minval
+        self._maxval = maxval
+        self._value = init or minval
+
+    def increment(self):
+        self._value = min(self._value + 1, self._maxval)
+
+    def decrement(self):
+        self._value = max(self._value - 1, self._minval)

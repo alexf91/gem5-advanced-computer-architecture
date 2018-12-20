@@ -85,7 +85,8 @@ class BenchmarkRunner(object):
                 break
 
             info = eval(line)
-            meth = getattr(self.predictor, info['method'])
+            #print(info)
+            meth = getattr(self.predictor, '_base_' + info['method'])
             del info['method']
             results = meth(**info)
             if results is not None:

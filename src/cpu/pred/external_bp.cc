@@ -46,10 +46,10 @@ void
 ExternalBP::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
   errno = 0;
-  fprintf(connfp, "{'method': 'btbUpdate', "
+  fprintf(connfp, "{'method': 'btb_update', "
                    "'tid': %d, "
                    "'branch_addr': %lu, "
-                   "'bp_history': %lu}\n",
+                   "'bp_history_index': %lu}\n",
                    tid, branch_addr, (uint64_t) bp_history);
   fflush(connfp);
 
@@ -67,7 +67,7 @@ ExternalBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
   fprintf(connfp, "{'method': 'lookup', "
                    "'tid': %d, "
                    "'branch_addr': %lu, "
-                   "'bp_history': %lu}\n",
+                   "'bp_history_index': %lu}\n",
                    tid, branch_addr, (uint64_t) bp_history);
   fflush(connfp);
 
@@ -94,7 +94,7 @@ ExternalBP::update(ThreadID tid, Addr branch_addr, bool taken,
                    "'tid': %d, "
                    "'branch_addr': %lu, "
                    "'taken': %d, "
-                   "'bp_history': %lu, "
+                   "'bp_history_index': %lu, "
                    "'squashed': %d}\n", tid, branch_addr, taken, (uint64_t)
                                            bp_history, squashed);
   fflush(connfp);
@@ -105,10 +105,11 @@ void
 ExternalBP::uncondBranch(ThreadID tid, Addr pc, void *&bp_history)
 {
   errno = 0;
-  fprintf(connfp, "{'method': 'uncondBranch', "
+  fprintf(connfp, "{'method': 'uncond_branch', "
                    "'tid': %d, "
-                   "'pc': %lu, "
-                   "'bp_history': %lu}\n", tid, pc, (uint64_t) bp_history);
+                   "'branch_addr': %lu, "
+                   "'bp_history_index': %lu}\n", tid, pc,
+                                                 (uint64_t) bp_history);
   fflush(connfp);
 
   char line[BUFSIZE];
@@ -123,7 +124,7 @@ ExternalBP::squash(ThreadID tid, void * bp_history)
 {
   fprintf(connfp, "{'method': 'squash', "
                    "'tid': %d, "
-                   "'bp_history': %lu}\n", tid, (uint64_t) bp_history);
+                   "'bp_history_index': %lu}\n", tid, (uint64_t) bp_history);
   fflush(connfp);
 }
 
