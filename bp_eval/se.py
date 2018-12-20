@@ -69,41 +69,58 @@ from common.Caches import *
 from common.cpu2000 import *
 
 
-def branch_predictor_loop(predictor):
-    sockfd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    try:
-        os.unlink('/tmp/gem5.socket')
-    except OSError:
-        pass
+class PredictorLoop(multiprocessing.Process):
+    def __init__(self, predstr):
+        super(PredictorLoop, self).__init__()
+        self.predstr = predstr
+        self.running = multiprocessing.Value('b', 1)
 
-    sockfd.bind('/tmp/gem5.socket')
-    sockfd.listen(5)
+    def stop(self):
+        self.running.value = 0
 
-    connfd, addr = sockfd.accept()
-    connfp = connfd.makefile(mode='rw')
+    def run(self):
+        predictor = eval('predictors.%s' % self.predstr)
 
-    while True:
-        line = connfp.readline()
-        if not line:
-            break
+        sockfd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            os.unlink('/tmp/gem5.socket')
+        except OSError:
+            pass
 
-        info = eval(line)
-        print(info)
-        meth = getattr(predictor, info['method'])
-        del info['method']
-        results = meth(**info)
-        if results is not None:
-            rsp = ','.join(map(str, map(int, results)))
-            connfp.write(rsp + '\n')
-            connfp.flush()
+        sockfd.bind('/tmp/gem5.socket')
+        sockfd.listen(5)
 
-    connfd.close()
-    sockfd.close()
+        connfd, addr = sockfd.accept()
+        connfd.settimeout(0.1)
+        connfp = connfd.makefile(mode='rw')
 
-    try:
-        os.unlink('/tmp/gem5.socket')
-    except OSError:
-        pass
+        while self.running.value:
+            try:
+                line = connfp.readline()
+            except socket.timeout:
+                continue
+            if not line:
+                break
+
+            info = eval(line)
+            #print(info)
+            meth = getattr(predictor, info['method'])
+            del info['method']
+            results = meth(**info)
+            if results is not None:
+                rsp = ','.join(map(str, map(int, results)))
+                connfp.write(rsp + '\n')
+                connfp.flush()
+
+        connfd.close()
+        sockfd.close()
+
+        try:
+            os.unlink('/tmp/gem5.socket')
+        except OSError:
+            pass
+
+        predictor.print_statistics()
 
 
 def get_processes(options):
@@ -170,7 +187,6 @@ if len(args) != 1:
     print("Error: Branch Predictor missing")
     sys.exit(1)
 
-predictor = eval('predictors.%s' % args[0])
 
 multiprocesses = []
 numThreads = 1
@@ -308,12 +324,12 @@ else:
     CacheConfig.config_cache(options, system)
     MemConfig.config_mem(options, system)
 
-bpp = multiprocessing.Process(target=branch_predictor_loop, args=(predictor, ))
+# Create the branch predictor and start the simulation
+bpp = PredictorLoop(args[0])
 bpp.start()
 
 root = Root(full_system = False, system = system)
 Simulation.run(options, root, system, FutureClass)
 
-bpp.join(timeout=1)
-bpp.terminate()
+bpp.stop()
 bpp.join()
