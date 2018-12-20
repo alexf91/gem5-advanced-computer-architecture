@@ -17,12 +17,13 @@
 
 #include "cpu/pred/external_bp.hh"
 
-#include <cstdio.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+
+#include <cstdio>
 
 #define BUFSIZE 1024
 
@@ -44,6 +45,7 @@ ExternalBP::ExternalBP(const ExternalBPParams *params)
 void
 ExternalBP::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
+  errno = 0;
   fprintf(connfp, "{'method': 'btbUpdate', "
                    "'tid': %d, "
                    "'branch_addr': %lu, "
@@ -53,7 +55,6 @@ ExternalBP::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 
   char line[BUFSIZE];
   assert(fgets(line, BUFSIZE, connfp));
-  errno = 0;
   bp_history = (void *) strtoul(line, NULL, 10);
   assert(errno == 0);
 }
@@ -62,6 +63,7 @@ ExternalBP::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 bool
 ExternalBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
+  errno = 0;
   fprintf(connfp, "{'method': 'lookup', "
                    "'tid': %d, "
                    "'branch_addr': %lu, "
@@ -77,7 +79,6 @@ ExternalBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
   char *str_hist = strtok(NULL, ",");
   assert(str_hist);
 
-  errno = 0;
   bp_history = (void *) strtoul(str_hist, NULL, 10);
   bool pred = strtol(str_pred, NULL, 10);
   assert(errno == 0);
@@ -103,6 +104,7 @@ ExternalBP::update(ThreadID tid, Addr branch_addr, bool taken,
 void
 ExternalBP::uncondBranch(ThreadID tid, Addr pc, void *&bp_history)
 {
+  errno = 0;
   fprintf(connfp, "{'method': 'uncondBranch', "
                    "'tid': %d, "
                    "'pc': %lu, "
@@ -112,7 +114,6 @@ ExternalBP::uncondBranch(ThreadID tid, Addr pc, void *&bp_history)
   char line[BUFSIZE];
   assert(fgets(line, BUFSIZE, connfp));
 
-  errno = 0;
   bp_history = (void *) strtoul(line, NULL, 10);
   assert(errno == 0);
 }
