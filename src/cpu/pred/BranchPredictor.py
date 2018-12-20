@@ -102,3 +102,8 @@ class LTAGE(BranchPredictor):
     maxHist = Param.Unsigned(640, "Maximum history size of LTAGE")
     minTagWidth = Param.Unsigned(7, "Minimum tag size in tag tables")
 
+
+class ExternalBP(BranchPredictor):
+    type = 'ExternalBP'
+    cxx_class = 'ExternalBP'
+    cxx_header = "cpu/pred/external_bp.hh"
