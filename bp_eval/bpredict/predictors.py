@@ -89,3 +89,43 @@ class Local2Bit(object):
 
     def print_statistics(self):
         print('Local2Bit: No stats')
+
+
+class Global2Bit(object):
+    def __init__(self):
+        self.counter = SaturatingCounter()
+
+    def lookup(self, tid, branch_addr, bp_history):
+        """Returns a tuple of the prediction and the new bp_history key."""
+        return self.counter.msb(), 0
+
+    def btbUpdate(self, tid, branch_addr, bp_history):
+        """UNUSED. Returns the new bp_history key (in a tuple)."""
+        assert bp_history == 0
+        return 0,
+
+    def uncondBranch(self, tid, pc, bp_history):
+        """UNUSED. Returns the new bp_history key (in a tuple)."""
+        assert bp_history == 0
+        return 0,
+
+    def update(self, tid, branch_addr, taken, bp_history, squashed):
+        """Returns nothing."""
+        assert bp_history == 0
+        if squashed:
+            return None
+
+        if taken:
+            self.counter.up()
+        else:
+            self.counter.down()
+
+        return None
+
+    def squash(self, tid, bp_history):
+        """UNUSED. Returns nothing."""
+        assert bp_history == 0
+        return None
+
+    def print_statistics(self):
+        print('Global2Bit: No stats')
