@@ -38,10 +38,11 @@ gem5path = os.path.join(cwd, '..', '..', 'build', 'ALPHA', 'gem5.opt')
 class BenchmarkRunner(object):
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, *args):
+    def __init__(self, predictor, prog, *args, socket_name='/tmp/gem5.socket'):
         self.predictor = predictor
         self.prog = prog
         self.args = args
+        self.socket_name = socket_name
 
         self.stdout = None
         self.stderr = None
@@ -61,12 +62,14 @@ class BenchmarkRunner(object):
             cmd.append('--options')
             cmd.append(' '.join(map(str, self.args)))
 
+        cmd.append(self.socket_name)
+
         # Initialize the passive socket
         with contextlib.suppress(FileNotFoundError):
-            os.unlink('/tmp/gem5.socket')
+            os.unlink(self.socket_name)
 
         sockfd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sockfd.bind('/tmp/gem5.socket')
+        sockfd.bind(self.socket_name)
         sockfd.listen(1)
 
         # Start the simulator
@@ -100,7 +103,7 @@ class BenchmarkRunner(object):
         connfd.close()
         sockfd.close()
         with contextlib.suppress(FileNotFoundError):
-            os.unlink('/tmp/gem5.socket')
+            os.unlink(self.socket_name)
 
         self.stdout = gemproc.stdout.read()
         self.stderr = gemproc.stderr.read()

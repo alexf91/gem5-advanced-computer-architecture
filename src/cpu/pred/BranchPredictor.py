@@ -107,3 +107,5 @@ class ExternalBP(BranchPredictor):
     type = 'ExternalBP'
     cxx_class = 'ExternalBP'
     cxx_header = "cpu/pred/external_bp.hh"
+
+    socketName = Param.String("/tmp/gem5.socket", "Name of the socket")

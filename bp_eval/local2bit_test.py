@@ -15,28 +15,35 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import bpredict
 
 
 benchmark = 'benchmarks/blackscholes/blackscholes.alpha'
 args = (1, 'benchmarks/blackscholes/blackscholes.test.input', '/dev/null')
-
 sizes = [256, 512, 1024, 2048, 4096, 8192, 16384]
-hitrate = []
 
-for size in sizes:
+
+def run_benchmark(size):
     pred = bpredict.Local2BitPredictor(size)
-    runner = bpredict.BenchmarkRunner(pred, benchmark, *args)
+    socket_name = '/tmp/gem5.socket.%d' % size
+    runner = bpredict.BenchmarkRunner(pred, benchmark, *args,
+                                      socket_name=socket_name)
     runner.run()
     for line in runner.stats.split('\n'):
         if 'system.cpu.branchPred.BTBHitPct' in line:
-            hitrate.append(float(line.split()[1]) / 100)
+            return float(line.split()[1]) / 100
 
-plt.semilogx(sizes, hitrate)
-plt.title('Local 2-Bit Predictor')
-plt.xlabel('Predictor size in bytes')
-plt.xticks(sizes, sizes)
-plt.ylabel('Hitrate')
-plt.grid()
-plt.show()
+
+if __name__ == '__main__':
+    pool = Pool(8)
+    hitrate = pool.map(run_benchmark, sizes)
+
+    plt.semilogx(sizes, hitrate)
+    plt.title('Local 2-Bit Predictor')
+    plt.xlabel('Predictor size in bytes')
+    plt.xticks(sizes, sizes)
+    plt.ylabel('Hitrate')
+    plt.grid()
+    plt.show()

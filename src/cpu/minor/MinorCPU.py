@@ -275,9 +275,8 @@ class MinorCPU(BaseCPU):
     enableIdling = Param.Bool(True,
         "Enable cycle skipping when the processor is idle\n");
 
-    #branchPred = Param.BranchPredictor(TournamentBP(
-        #numThreads = Parent.numThreads), "Branch Predictor")
-    branchPred = Param.BranchPredictor(ExternalBP(), "Branch Predictor")
+    branchPred = Param.BranchPredictor(TournamentBP(
+        numThreads = Parent.numThreads), "Branch Predictor")
 
     def addCheckerCpu(self):
         print("Checker not yet supported by MinorCPU")

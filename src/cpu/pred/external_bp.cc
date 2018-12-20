@@ -34,7 +34,8 @@ ExternalBP::ExternalBP(const ExternalBPParams *params)
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
-  strncpy(addr.sun_path, "/tmp/gem5.socket", sizeof(addr.sun_path) - 1);
+  const char *socketName = params->socketName.c_str();
+  strncpy(addr.sun_path, socketName, sizeof(addr.sun_path) - 1);
 
   int connfd = socket(AF_UNIX, SOCK_STREAM, 0);
   assert(connect(connfd, (struct sockaddr *) &addr, sizeof(addr)) == 0);

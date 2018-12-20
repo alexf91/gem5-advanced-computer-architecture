@@ -130,8 +130,8 @@ if '--ruby' in sys.argv:
 
 (options, args) = parser.parse_args()
 
-if args:
-    print("Error: script doesn't take any positional arguments")
+if len(args) != 1:
+    print("Error: No socket name provided")
     sys.exit(1)
 
 multiprocesses = []
@@ -271,4 +271,7 @@ else:
     MemConfig.config_mem(options, system)
 
 root = Root(full_system = False, system = system)
+branchPred = ExternalBP()
+branchPred.socketName = args[0]
+root.system.cpu[0].branchPred = branchPred
 Simulation.run(options, root, system, FutureClass)
