@@ -17,12 +17,12 @@
 
 #include "cpu/pred/external_bp.hh"
 
+#include <cstdio.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <unistd.h>
-
-#include <cstdio>
 
 #define BUFSIZE 1024
 
@@ -30,13 +30,14 @@
 ExternalBP::ExternalBP(const ExternalBPParams *params)
     : BPredUnit(params)
 {
-  struct addrinfo *result;
-  getaddrinfo("127.0.0.1", "7288", NULL, &result);
+  struct sockaddr_un addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, "/tmp/gem5.socket", sizeof(addr.sun_path) - 1);
 
-  int connfd = socket(AF_INET, SOCK_STREAM, 0);
-  connect(connfd, result->ai_addr, result->ai_addrlen);
+  int connfd = socket(AF_UNIX, SOCK_STREAM, 0);
+  assert(connect(connfd, (struct sockaddr *) &addr, sizeof(addr)) == 0);
   connfp = fdopen(connfd, "r+");
-  freeaddrinfo(result);
 }
 
 
