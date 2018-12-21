@@ -126,8 +126,8 @@ class BenchmarkRunner(object):
         with contextlib.suppress(FileNotFoundError):
             os.unlink(self.socket_name)
 
-        self.stdout = gemproc.stdout.read()
-        self.stderr = gemproc.stderr.read()
+        self.stdout = gemproc.stdout.read().decode()
+        self.stderr = gemproc.stderr.read().decode()
         with open(os.path.join(outdir, 'stats.txt')) as fp:
             self.stats = fp.read()
 
