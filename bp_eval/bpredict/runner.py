@@ -46,12 +46,10 @@ class ExternalRunner(object):
     """Benchmark runner for external predictors."""
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, args=None,
-                 socket_name='/tmp/gem5.socket'):
+    def __init__(self, predictor, prog, args=None):
         self.predictor = predictor
         self.prog = prog
         self.args = args or tuple()
-        self.socket_name = socket_name
 
         self.stdout = None
         self.stderr = None
@@ -62,6 +60,7 @@ class ExternalRunner(object):
         sepath = os.path.join(os.path.dirname(__file__), 'se.py')
 
         outdir = tempfile.mkdtemp(prefix='gem5-')
+        socket_name = os.path.join(outdir, 'gem5.socket')
 
         cmd = [
             self.gem5path, '--outdir', outdir, sepath, '-n', '1', '--cpu-type',
@@ -74,17 +73,14 @@ class ExternalRunner(object):
         # Append the configuration parameters
         config = '\n'.join([
             'branchPred = ExternalBP()',
-            'branchPred.socketName = "%s"' % self.socket_name,
+            'branchPred.socketName = "%s"' % socket_name,
             'root.system.cpu[0].branchPred = branchPred',
         ])
         cmd.append(config)
 
         # Initialize the passive socket
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(self.socket_name)
-
         sockfd = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sockfd.bind(self.socket_name)
+        sockfd.bind(socket_name)
         sockfd.listen(1)
 
         # Start the simulator
@@ -131,8 +127,6 @@ class ExternalRunner(object):
 
         connfd.close()
         sockfd.close()
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(self.socket_name)
 
         self.stdout = gemproc.stdout.read().decode()
         self.stderr = gemproc.stderr.read().decode()

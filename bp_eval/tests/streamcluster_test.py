@@ -26,8 +26,7 @@ sizes = [256, 512, 1024, 2048, 4096, 8192, 16384]
 
 def run_benchmark(size):
     pred = bpredict.Local2BitPredictor(size)
-    socket_name = '/tmp/gem5.socket.%d' % size
-    runner = bpredict.ExternalRunner(pred, benchmark, socket_name=socket_name)
+    runner = bpredict.ExternalRunner(pred, benchmark)
     runner.run()
 
     predicted = runner.stats.find('condPredicted')[0].values[0]
