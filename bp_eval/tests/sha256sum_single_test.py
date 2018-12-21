@@ -19,11 +19,14 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = 'benchmarks/hello-world/hello.alpha'
+benchmark = '../benchmarks/sha256sum/sha256sum.alpha'
+args = ('../benchmarks/sha256sum/small.bin', )
 
 pred = bpredict.Local2BitPredictor(8192)
-runner = bpredict.BenchmarkRunner(pred, benchmark)
+runner = bpredict.ExternalRunner(pred, benchmark, args=args)
 runner.run()
-for line in runner.stats.split('\n'):
-    if 'system.cpu.branchPred.BTBHitPct' in line:
-        print(line)
+
+predicted = runner.stats.find('condPredicted')[0]
+incorrect = runner.stats.find('condIncorrect')[0]
+
+print('Misprediction rate: %f' % (incorrect.values[0] / predicted.values[0]))

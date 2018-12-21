@@ -20,9 +20,7 @@ Contains functions and classes to run gem5 from Python instead of the other
 way around. This enables further analysis of algorithms through Jupyter.
 """
 
-from __future__ import print_function
-
-__all__ = ('BenchmarkRunner', )
+__all__ = ('ExternalRunner', 'InternalRunner')
 
 import os
 import socket
@@ -31,6 +29,8 @@ import contextlib
 import tempfile
 import shutil
 import struct
+
+from .statistics import Statistics
 
 METH_UNCOND_BRANCH = 0
 METH_LOOKUP        = 1
@@ -42,13 +42,15 @@ METH_SQUASH        = 4
 cwd = os.path.abspath(os.path.dirname(__file__))
 gem5path = os.path.join(cwd, '..', '..', 'build', 'ALPHA', 'gem5.opt')
 
-class BenchmarkRunner(object):
+class ExternalRunner(object):
+    """Benchmark runner for external predictors."""
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, *args, socket_name='/tmp/gem5.socket'):
+    def __init__(self, predictor, prog, args=None,
+                 socket_name='/tmp/gem5.socket'):
         self.predictor = predictor
         self.prog = prog
-        self.args = args
+        self.args = args or tuple()
         self.socket_name = socket_name
 
         self.stdout = None
@@ -69,7 +71,13 @@ class BenchmarkRunner(object):
             cmd.append('--options')
             cmd.append(' '.join(map(str, self.args)))
 
-        cmd.append(self.socket_name)
+        # Append the configuration parameters
+        config = '\n'.join([
+            'branchPred = ExternalBP()',
+            'branchPred.socketName = "%s"' % self.socket_name,
+            'root.system.cpu[0].branchPred = branchPred',
+        ])
+        cmd.append(config)
 
         # Initialize the passive socket
         with contextlib.suppress(FileNotFoundError):
@@ -129,6 +137,52 @@ class BenchmarkRunner(object):
         self.stdout = gemproc.stdout.read().decode()
         self.stderr = gemproc.stderr.read().decode()
         with open(os.path.join(outdir, 'stats.txt')) as fp:
-            self.stats = fp.read()
+            self.stats = Statistics(fp.read())
+
+        shutil.rmtree(outdir)
+
+
+class InternalRunner(object):
+    """Benchmark runner for internal predictors."""
+    gem5path = gem5path
+
+    def __init__(self, setup_code, prog, args=None):
+        self.setup_code = setup_code
+        self.prog = prog
+        self.args = args or tuple()
+
+        self.stdout = None
+        self.stderr = None
+        self.stats = None
+
+    def run(self):
+        assert os.path.exists(self.gem5path)
+        sepath = os.path.join(os.path.dirname(__file__), 'se.py')
+
+        outdir = tempfile.mkdtemp(prefix='gem5-')
+
+        cmd = [
+            self.gem5path, '--outdir', outdir, sepath, '-n', '1', '--cpu-type',
+            'MinorCPU', '--caches', '-c', self.prog
+        ]
+        if self.args:
+            cmd.append('--options')
+            cmd.append(' '.join(map(str, self.args)))
+
+        # Append the setup code
+        cmd.append(self.setup_code)
+
+        # Start the simulator
+        env = {'PYTHONPATH': os.path.join(cwd, '..', '..', 'configs')}
+        gemproc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+
+        # Cleanup
+        gemproc.wait()
+
+        self.stdout = gemproc.stdout.read().decode()
+        self.stderr = gemproc.stderr.read().decode()
+        with open(os.path.join(outdir, 'stats.txt')) as fp:
+            self.stats = Statistics(fp.read())
 
         shutil.rmtree(outdir)

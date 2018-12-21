@@ -20,22 +20,21 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = 'benchmarks/sha256sum/sha256sum.alpha'
-args = ('benchmarks/sha256sum/small.bin', )
+benchmark = '../benchmarks/blackscholes/blackscholes.alpha'
+args = (1, '../benchmarks/blackscholes/blackscholes.test.input', '/dev/null')
 sizes = [256, 512, 1024, 2048, 4096, 8192, 16384]
 
 
 def run_benchmark(size):
     pred = bpredict.Local2BitPredictor(size)
     socket_name = '/tmp/gem5.socket.%d' % size
-    runner = bpredict.BenchmarkRunner(pred, benchmark, *args,
+    runner = bpredict.ExternalRunner(pred, benchmark, args=args,
                                       socket_name=socket_name)
     runner.run()
-    for line in runner.stats.split('\n'):
-        if 'system.cpu.branchPred.BTBHitPct' in line:
-            return float(line.split()[1]) / 100
+    predicted = runner.stats.find('condPredicted')[0]
+    incorrect = runner.stats.find('condIncorrect')[0]
 
-    return (predicted - incorrect) / predicted
+    return (incorrect.values[0] / predicted.values[0])
 
 
 if __name__ == '__main__':
@@ -46,6 +45,6 @@ if __name__ == '__main__':
     plt.title('Local 2-Bit Predictor')
     plt.xlabel('Predictor size in bytes')
     plt.xticks(sizes, sizes)
-    plt.ylabel('Hitrate')
+    plt.ylabel('Misprediction Rate')
     plt.grid()
     plt.show()

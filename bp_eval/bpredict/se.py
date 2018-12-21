@@ -130,8 +130,8 @@ if '--ruby' in sys.argv:
 
 (options, args) = parser.parse_args()
 
-if len(args) != 1:
-    print("Error: No socket name provided")
+if len(args) > 1:
+    print("Error: Too many arguments")
     sys.exit(1)
 
 multiprocesses = []
@@ -271,7 +271,8 @@ else:
     MemConfig.config_mem(options, system)
 
 root = Root(full_system = False, system = system)
-branchPred = ExternalBP()
-branchPred.socketName = args[0]
-root.system.cpu[0].branchPred = branchPred
+# Execute the code we got as an argument to initialize the system. Not sure why
+# the -P argument doesn't work...
+if args:
+    exec(args[0])
 Simulation.run(options, root, system, FutureClass)

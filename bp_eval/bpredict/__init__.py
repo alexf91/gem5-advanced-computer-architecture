@@ -19,3 +19,4 @@ from .runner import *
 from .basepredictor import *
 from .utils import *
 from .local2bit import *
+from .statistics import *

@@ -21,11 +21,14 @@ Sample implementation of the local 2-bit predictor provided by gem5.
 
 __all__ = ('Local2BitPredictor', )
 
+import hashlib
+
 from .basepredictor import BasePredictor
 from .utils import SaturatingCounter
 
 
 class Local2BitPredictor(BasePredictor):
+    """The number of counters is size_in_bytes * 4"""
     def __init__(self, size_in_bytes):
         super(Local2BitPredictor, self).__init__()
 
@@ -33,15 +36,18 @@ class Local2BitPredictor(BasePredictor):
         self._table = [SaturatingCounter(0, 3) for _ in range(ncounters)]
 
     def lookup(self, tid, branch_addr, bp_history):
-        index = (branch_addr // 4) % len(self._table)
+        index = self._get_index(branch_addr)
         return self._table[index].value >= 2
 
     def update(self, tid, branch_addr, taken, bp_history, squashed):
         if squashed:
             return
 
-        index = (branch_addr // 4) % len(self._table)
+        index = self._get_index(branch_addr)
         if taken:
             self._table[index].increment()
         else:
             self._table[index].decrement()
+
+    def _get_index(self, branch_addr):
+        return ((branch_addr // 4) % len(self._table))
