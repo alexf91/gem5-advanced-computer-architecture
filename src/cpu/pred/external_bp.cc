@@ -27,6 +27,27 @@
 
 #define BUFSIZE 1024
 
+#define METH_UNCOND_BRANCH  0
+#define METH_LOOKUP         1
+#define METH_BTB_UPDATE     2
+#define METH_UPDATE         3
+#define METH_SQUASH         4
+
+
+struct __attribute__((packed)) {
+  uint8_t method_id;
+  int16_t tid;
+  uint64_t branch_addr;
+  uint64_t bp_history_index;
+  uint8_t taken;
+  uint8_t squashed;
+} msg_buffer;
+
+struct __attribute__((packed)) {
+  uint8_t pred;
+  uint64_t bp_history_index;
+} rsp_buffer;
+
 
 ExternalBP::ExternalBP(const ExternalBPParams *params)
     : BPredUnit(params)
@@ -47,16 +68,16 @@ void
 ExternalBP::btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
   errno = 0;
-  fprintf(connfp, "{'method': 'btb_update', "
-                   "'tid': %d, "
-                   "'branch_addr': %lu, "
-                   "'bp_history_index': %lu}\n",
-                   tid, branch_addr, (uint64_t) bp_history);
+  msg_buffer.method_id = METH_BTB_UPDATE;
+  msg_buffer.tid = tid;
+  msg_buffer.branch_addr = branch_addr;
+  msg_buffer.bp_history_index = (uint64_t) bp_history;
+
+  fwrite(&msg_buffer, sizeof(msg_buffer), 1, connfp);
   fflush(connfp);
 
-  char line[BUFSIZE];
-  assert(fgets(line, BUFSIZE, connfp));
-  bp_history = (void *) strtoul(line, NULL, 10);
+  assert(fread(&rsp_buffer, sizeof(rsp_buffer), 1, connfp) == 1);
+  bp_history = (void *) rsp_buffer.bp_history_index;
   assert(errno == 0);
 }
 
@@ -65,23 +86,18 @@ bool
 ExternalBP::lookup(ThreadID tid, Addr branch_addr, void * &bp_history)
 {
   errno = 0;
-  fprintf(connfp, "{'method': 'lookup', "
-                   "'tid': %d, "
-                   "'branch_addr': %lu, "
-                   "'bp_history_index': %lu}\n",
-                   tid, branch_addr, (uint64_t) bp_history);
+  msg_buffer.method_id = METH_LOOKUP;
+  msg_buffer.tid = tid;
+  msg_buffer.branch_addr = branch_addr;
+  msg_buffer.bp_history_index = (uint64_t) bp_history;
+
+  fwrite(&msg_buffer, sizeof(msg_buffer), 1, connfp);
   fflush(connfp);
 
-  char line[BUFSIZE];
-  assert(fgets(line, BUFSIZE, connfp));
+  assert(fread(&rsp_buffer, sizeof(rsp_buffer), 1, connfp) == 1);
+  bp_history = (void *) rsp_buffer.bp_history_index;
+  bool pred = rsp_buffer.pred;
 
-  char *str_pred = strtok(line, ",");
-  assert(str_pred);
-  char *str_hist = strtok(NULL, ",");
-  assert(str_hist);
-
-  bp_history = (void *) strtoul(str_hist, NULL, 10);
-  bool pred = strtol(str_pred, NULL, 10);
   assert(errno == 0);
   return pred;
 }
@@ -91,13 +107,14 @@ void
 ExternalBP::update(ThreadID tid, Addr branch_addr, bool taken,
                    void *bp_history, bool squashed)
 {
-  fprintf(connfp, "{'method': 'update', "
-                   "'tid': %d, "
-                   "'branch_addr': %lu, "
-                   "'taken': %d, "
-                   "'bp_history_index': %lu, "
-                   "'squashed': %d}\n", tid, branch_addr, taken, (uint64_t)
-                                           bp_history, squashed);
+  msg_buffer.method_id = METH_UPDATE;
+  msg_buffer.tid = tid;
+  msg_buffer.branch_addr = branch_addr;
+  msg_buffer.bp_history_index = (uint64_t) bp_history;
+  msg_buffer.taken = taken;
+  msg_buffer.squashed = squashed;
+
+  fwrite(&msg_buffer, sizeof(msg_buffer), 1, connfp);
   fflush(connfp);
 }
 
@@ -106,26 +123,27 @@ void
 ExternalBP::uncondBranch(ThreadID tid, Addr pc, void *&bp_history)
 {
   errno = 0;
-  fprintf(connfp, "{'method': 'uncond_branch', "
-                   "'tid': %d, "
-                   "'branch_addr': %lu, "
-                   "'bp_history_index': %lu}\n", tid, pc,
-                                                 (uint64_t) bp_history);
+  msg_buffer.method_id = METH_UNCOND_BRANCH;
+  msg_buffer.tid = tid;
+  msg_buffer.branch_addr = pc;
+  msg_buffer.bp_history_index = (uint64_t) bp_history;
+
+  fwrite(&msg_buffer, sizeof(msg_buffer), 1, connfp);
   fflush(connfp);
 
-  char line[BUFSIZE];
-  assert(fgets(line, BUFSIZE, connfp));
-
-  bp_history = (void *) strtoul(line, NULL, 10);
+  assert(fread(&rsp_buffer, sizeof(rsp_buffer), 1, connfp) == 1);
+  bp_history = (void *) rsp_buffer.bp_history_index;
   assert(errno == 0);
 }
 
 void
 ExternalBP::squash(ThreadID tid, void * bp_history)
 {
-  fprintf(connfp, "{'method': 'squash', "
-                   "'tid': %d, "
-                   "'bp_history_index': %lu}\n", tid, (uint64_t) bp_history);
+  msg_buffer.method_id = METH_SQUASH;
+  msg_buffer.tid = tid;
+  msg_buffer.bp_history_index = (uint64_t) bp_history;
+
+  fwrite(&msg_buffer, sizeof(msg_buffer), 1, connfp);
   fflush(connfp);
 }
 

@@ -45,12 +45,12 @@ class BasePredictor(object):
         key = self._next_key()
         self._histories[key] = bp_history
         self.uncond_branch(tid, branch_addr, bp_history)
-        return key,
+        return False, key
 
     def _base_btb_update(self, tid, branch_addr, bp_history_index):
         assert bp_history_index != 0
         self.btb_update(tid, branch_addr, self._histories[bp_history_index])
-        return bp_history_index,
+        return False, bp_history_index
 
     def _base_update(self, tid, branch_addr, taken, bp_history_index,
                      squashed):

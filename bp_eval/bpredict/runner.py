@@ -30,6 +30,13 @@ import subprocess
 import contextlib
 import tempfile
 import shutil
+import struct
+
+METH_UNCOND_BRANCH = 0
+METH_LOOKUP        = 1
+METH_BTB_UPDATE    = 2
+METH_UPDATE        = 3
+METH_SQUASH        = 4
 
 # Path of the gem5 binary relative to this file
 cwd = os.path.abspath(os.path.dirname(__file__))
@@ -79,22 +86,36 @@ class BenchmarkRunner(object):
 
         # Accept the connection from the simulator
         connfd, addr = sockfd.accept()
-        connfp = connfd.makefile(mode='rw')
+        connfp = connfd.makefile(mode='rwb')
 
         # Run the predictor
         while True:
-            line = connfp.readline()
-            if not line:
+            msg = connfp.read(21)
+            if not msg:
                 break
+            assert len(msg) == 21
 
-            info = eval(line)
+            info = struct.unpack('=bhQQbb', msg)
+            if info[0] == METH_UNCOND_BRANCH:
+                results = self.predictor._base_uncond_branch(info[1], info[2],
+                                                             info[3])
+            elif info[0] == METH_LOOKUP:
+                results = self.predictor._base_lookup(info[1], info[2],
+                                                      info[3])
+            elif info[0] == METH_BTB_UPDATE:
+                results = self.predictor._base_btb_update(info[1], info[2],
+                                                          info[3])
+            elif info[0] == METH_UPDATE:
+                results = self.predictor._base_update(info[1], info[2],
+                                                      info[4], info[3],
+                                                      info[5])
+            elif info[0] == METH_SQUASH:
+                results = self.predictor._base_squash(info[1], info[3])
+
             #print(info)
-            meth = getattr(self.predictor, '_base_' + info['method'])
-            del info['method']
-            results = meth(**info)
             if results is not None:
-                rsp = ','.join(map(str, map(int, results)))
-                connfp.write(rsp + '\n')
+                rsp = struct.pack('=bQ', *results)
+                connfp.write(rsp)
                 connfp.flush()
 
         # Cleanup
