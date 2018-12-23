@@ -20,7 +20,7 @@ Contains functions and classes to run gem5 from Python instead of the other
 way around. This enables further analysis of algorithms through Jupyter.
 """
 
-__all__ = ('ExternalRunner', 'InternalRunner')
+__all__ = ('ExternalRunner', 'InternalRunner', 'CPUType')
 
 import os
 import socket
@@ -29,8 +29,10 @@ import contextlib
 import tempfile
 import shutil
 import struct
+import enum
 
 from .statistics import Statistics
+
 
 METH_UNCOND_BRANCH = 0
 METH_LOOKUP        = 1
@@ -42,14 +44,20 @@ METH_SQUASH        = 4
 cwd = os.path.abspath(os.path.dirname(__file__))
 gem5path = os.path.join(cwd, '..', '..', 'build', 'ALPHA', 'gem5.opt')
 
+
+class CPUType(enum.Enum):
+    MINOR_CPU = 0
+    ATOMIC_SIMPLE_CPU = 1
+
 class ExternalRunner(object):
     """Benchmark runner for external predictors."""
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, args=None):
+    def __init__(self, predictor, prog, args=None, cputype=CPUType.MINOR_CPU):
         self.predictor = predictor
         self.prog = prog
         self.args = args or tuple()
+        self.cputype = cputype
 
         self.stdout = None
         self.stderr = None
@@ -62,10 +70,17 @@ class ExternalRunner(object):
         outdir = tempfile.mkdtemp(prefix='gem5-')
         socket_name = os.path.join(outdir, 'gem5.socket')
 
-        cmd = [
-            self.gem5path, '--outdir', outdir, sepath, '-n', '1', '--cpu-type',
-            'MinorCPU', '--caches', '-c', self.prog
-        ]
+        cmd = [self.gem5path, '--outdir', outdir, sepath, '-n', '1']
+
+        if self.cputype == CPUType.MINOR_CPU:
+            cmd.extend(['--cpu-type', 'MinorCPU', '--caches'])
+        elif self.cputype == CPUType.ATOMIC_SIMPLE_CPU:
+            cmd.extend(['--cpu-type', 'AtomicSimpleCPU'])
+        else:
+            raise ValueError('Unknown CPU type')
+
+        cmd.extend(['-c', self.prog])
+
         if self.args:
             cmd.append('--options')
             cmd.append(' '.join(map(str, self.args)))
@@ -140,10 +155,11 @@ class InternalRunner(object):
     """Benchmark runner for internal predictors."""
     gem5path = gem5path
 
-    def __init__(self, setup_code, prog, args=None):
+    def __init__(self, setup_code, prog, args=None, cputype=CPUType.MINOR_CPU):
         self.setup_code = setup_code
         self.prog = prog
         self.args = args or tuple()
+        self.cputype = cputype
 
         self.stdout = None
         self.stderr = None
@@ -155,10 +171,17 @@ class InternalRunner(object):
 
         outdir = tempfile.mkdtemp(prefix='gem5-')
 
-        cmd = [
-            self.gem5path, '--outdir', outdir, sepath, '-n', '1', '--cpu-type',
-            'MinorCPU', '--caches', '-c', self.prog
-        ]
+        cmd = [self.gem5path, '--outdir', outdir, sepath, '-n', '1']
+
+        if self.cputype == CPUType.MINOR_CPU:
+            cmd.extend(['--cpu-type', 'MinorCPU', '--caches'])
+        elif self.cputype == CPUType.ATOMIC_SIMPLE_CPU:
+            cmd.extend(['--cpu-type', 'AtomicSimpleCPU'])
+        else:
+            raise ValueError('Unknown CPU type')
+
+        cmd.extend(['-c', self.prog])
+
         if self.args:
             cmd.append('--options')
             cmd.append(' '.join(map(str, self.args)))
