@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = '../benchmarks/hello-world/hello.alpha'
+benchmark = '../benchmarks/hello-world/hello-world'
 bytesize = 2048
 
 

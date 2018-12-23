@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = '../benchmarks/streamcluster/streamcluster.alpha'
+benchmark = '../benchmarks/streamcluster/streamcluster'
 sizes = [256, 512, 1024, 2048, 4096, 8192, 16384]
 
 

@@ -20,18 +20,18 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = '../benchmarks/picosat/picosat.alpha'
+benchmark = '../benchmarks/picosat/picosat'
 allargs = [
-    ('../benchmarks/picosat/uf50-01.cnf', ),
-#    ('../benchmarks/picosat/uf50-02.cnf', ),
-#    ('../benchmarks/picosat/uf50-03.cnf', ),
-#    ('../benchmarks/picosat/uf50-04.cnf', ),
-#    ('../benchmarks/picosat/uf50-05.cnf', ),
-#    ('../benchmarks/picosat/uuf50-01.cnf', ),
-#    ('../benchmarks/picosat/uuf50-02.cnf', ),
-#    ('../benchmarks/picosat/uuf50-03.cnf', ),
-#    ('../benchmarks/picosat/uuf50-04.cnf', ),
-#    ('../benchmarks/picosat/uuf50-05.cnf', ),
+    ('../benchmarks/picosat/inputs/uf50-01.cnf', ),
+#    ('../benchmarks/picosat/inputs/uf50-02.cnf', ),
+#    ('../benchmarks/picosat/inputs/uf50-03.cnf', ),
+#    ('../benchmarks/picosat/inputs/uf50-04.cnf', ),
+#    ('../benchmarks/picosat/inputs/uf50-05.cnf', ),
+#    ('../benchmarks/picosat/inputs/uuf50-01.cnf', ),
+#    ('../benchmarks/picosat/inputs/uuf50-02.cnf', ),
+#    ('../benchmarks/picosat/inputs/uuf50-03.cnf', ),
+#    ('../benchmarks/picosat/inputs/uuf50-04.cnf', ),
+#    ('../benchmarks/picosat/inputs/uuf50-05.cnf', ),
 ]
 
 for args in allargs:

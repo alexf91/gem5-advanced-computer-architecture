@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = '../benchmarks/blackscholes/blackscholes.alpha'
-args = (1, '../benchmarks/blackscholes/blackscholes.test.input', '/dev/null')
+benchmark = '../benchmarks/blackscholes/blackscholes'
+args = (1, '../benchmarks/blackscholes/inputs/test.input', '/dev/null')
 sizes = [256, 512, 1024, 2048, 4096, 8192, 16384]
 
 
