@@ -20,7 +20,7 @@ Contains functions and classes to run gem5 from Python instead of the other
 way around. This enables further analysis of algorithms through Jupyter.
 """
 
-__all__ = ('ExternalRunner', 'InternalRunner', 'CPUType')
+__all__ = ('ExternalRunner', 'InternalRunner', 'FullSystemRunner', 'CPUType')
 
 import os
 import socket
@@ -41,8 +41,8 @@ METH_UPDATE        = 3
 METH_SQUASH        = 4
 
 # Path of the gem5 binary relative to this file
-cwd = os.path.abspath(os.path.dirname(__file__))
-gem5path = os.path.join(cwd, '..', '..', 'build', 'ALPHA', 'gem5.opt')
+pkgdir = os.path.abspath(os.path.dirname(__file__))
+gem5path = os.path.join(pkgdir, '..', '..', 'build', 'ALPHA', 'gem5.opt')
 
 
 class CPUType(enum.Enum):
@@ -53,7 +53,8 @@ class ExternalRunner(object):
     """Benchmark runner for external predictors."""
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, args=None, cputype=CPUType.MINOR_CPU):
+    def __init__(self, predictor, prog, args=None,
+                 cputype=CPUType.ATOMIC_SIMPLE_CPU):
         self.predictor = predictor
         self.prog = prog
         self.args = args or tuple()
@@ -65,7 +66,7 @@ class ExternalRunner(object):
 
     def run(self):
         assert os.path.exists(self.gem5path)
-        sepath = os.path.join(os.path.dirname(__file__), 'se.py')
+        sepath = os.path.join(pkgdir, 'se.py')
 
         outdir = tempfile.mkdtemp(prefix='gem5-')
         socket_name = os.path.join(outdir, 'gem5.socket')
@@ -99,7 +100,7 @@ class ExternalRunner(object):
         sockfd.listen(1)
 
         # Start the simulator
-        env = {'PYTHONPATH': os.path.join(cwd, '..', '..', 'configs')}
+        env = {'PYTHONPATH': os.path.join(pkgdir, '..', '..', 'configs')}
         gemproc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
 
@@ -155,7 +156,8 @@ class InternalRunner(object):
     """Benchmark runner for internal predictors."""
     gem5path = gem5path
 
-    def __init__(self, setup_code, prog, args=None, cputype=CPUType.MINOR_CPU):
+    def __init__(self, setup_code, prog, args=None,
+                 cputype=CPUType.ATOMIC_SIMPLE_CPU):
         self.setup_code = setup_code
         self.prog = prog
         self.args = args or tuple()
@@ -167,7 +169,7 @@ class InternalRunner(object):
 
     def run(self):
         assert os.path.exists(self.gem5path)
-        sepath = os.path.join(os.path.dirname(__file__), 'se.py')
+        sepath = os.path.join(pkgdir, 'se.py')
 
         outdir = tempfile.mkdtemp(prefix='gem5-')
 
@@ -190,7 +192,7 @@ class InternalRunner(object):
         cmd.append(self.setup_code)
 
         # Start the simulator
-        env = {'PYTHONPATH': os.path.join(cwd, '..', '..', 'configs')}
+        env = {'PYTHONPATH': os.path.join(pkgdir, '..', '..', 'configs')}
         gemproc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE)
 
@@ -201,5 +203,64 @@ class InternalRunner(object):
         self.stderr = gemproc.stderr.read().decode()
         with open(os.path.join(outdir, 'stats.txt')) as fp:
             self.stats = Statistics(fp.read())
+
+        shutil.rmtree(outdir)
+
+
+class FullSystemRunner(object):
+    """Run a full system without a branch predictor."""
+    gem5path = gem5path
+
+    def __init__(self, scriptcode, cputype=CPUType.ATOMIC_SIMPLE_CPU):
+        self.scriptcode = scriptcode
+        self.cputype = cputype
+
+        self.stdout = None
+        self.stderr = None
+        self.stats = None
+        self.terminal = None
+
+    def run(self):
+        assert os.path.exists(self.gem5path)
+        fspath = os.path.join(pkgdir, '..', '..', 'configs', 'example',
+                              'fs.py')
+
+        outdir = tempfile.mkdtemp(prefix='gem5-')
+        scriptpath = os.path.join(outdir, 'runscript.sh')
+        with open(scriptpath, 'w') as fp:
+            fp.write(self.scriptcode)
+
+        cmd = [self.gem5path, '--outdir', outdir, fspath, '-n', '1']
+
+        if self.cputype == CPUType.MINOR_CPU:
+            cmd.extend(['--cpu-type', 'MinorCPU', '--caches'])
+        elif self.cputype == CPUType.ATOMIC_SIMPLE_CPU:
+            cmd.extend(['--cpu-type', 'AtomicSimpleCPU'])
+        else:
+            raise ValueError('Unknown CPU type')
+
+        cmd.extend(['--script', scriptpath])
+
+        # Start the simulator
+        m5path = '/dist/m5/system:%s/../toolchain/m5_system_2.0b3' % pkgdir
+        imgpath = ('%s/../toolchain/m5_system_2.0b3/disks/linux-parsec.img'
+                    % pkgdir)
+        env = {
+            'PYTHONPATH': os.path.join(pkgdir, '..', '..', 'configs'),
+            'M5_PATH': m5path,
+            'LINUX_IMAGE': imgpath
+        }
+        gemproc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+
+        # Cleanup
+        gemproc.wait()
+
+        self.stdout = gemproc.stdout.read().decode()
+        self.stderr = gemproc.stderr.read().decode()
+        with open(os.path.join(outdir, 'stats.txt')) as fp:
+            self.stats = Statistics(fp.read())
+        with open(os.path.join(outdir, 'system.terminal')) as fp:
+            self.terminal = fp.read()
 
         shutil.rmtree(outdir)
