@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-__all__ = ('SaturatingCounter', )
+__all__ = ('SaturatingCounter', 'History')
 
 
 class SaturatingCounter(object):
@@ -32,3 +32,14 @@ class SaturatingCounter(object):
 
     def decrement(self):
         self._value = max(self._value - 1, self._minval)
+
+
+class History(object):
+    value = property(lambda self: self._value)
+
+    def __init__(self, length):
+        self._length = length
+        self._value = 0
+
+    def update(self, taken):
+        self._value = ((self._value << 1) | taken) & ((1 << self._length) - 1)

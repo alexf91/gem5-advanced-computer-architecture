@@ -26,7 +26,7 @@ pred = bpredict.Local2BitPredictor(8192)
 runner = bpredict.ExternalRunner(pred, benchmark, args=args)
 runner.run()
 
-predicted = runner.stats.find('condPredicted')[0]
-incorrect = runner.stats.find('condIncorrect')[0]
+predicted = runner.stats.find('condPredicted')[0].values[0]
+incorrect = runner.stats.find('condIncorrect')[0].values[0]
 
-print('Misprediction rate: %f' % (incorrect.values[0] / predicted.values[0]))
+print('Misprediction rate: %f' % (incorrect / predicted))

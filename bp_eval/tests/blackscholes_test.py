@@ -29,10 +29,10 @@ def run_benchmark(size):
     pred = bpredict.Local2BitPredictor(size)
     runner = bpredict.ExternalRunner(pred, benchmark, args=args)
     runner.run()
-    predicted = runner.stats.find('condPredicted')[0]
-    incorrect = runner.stats.find('condIncorrect')[0]
+    predicted = runner.stats.find('condPredicted')[0].values[0]
+    incorrect = runner.stats.find('condIncorrect')[0].values[0]
 
-    return (incorrect.values[0] / predicted.values[0])
+    return (incorrect / predicted)
 
 
 if __name__ == '__main__':
