@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import time
 import matplotlib.pyplot as plt
 import bpredict
 
@@ -22,19 +23,24 @@ import bpredict
 benchmark = '../benchmarks/hello-world/hello.alpha'
 bytesize = 2048
 
+
 def run_test(runner):
+    start = time.time()
     runner.run()
 
     predicted = runner.stats.find('condPredicted')[0].values[0]
     incorrect = runner.stats.find('condIncorrect')[0].values[0]
 
     print('    misprediction rate: %f' % (incorrect / predicted))
+    print('    runtime: %f' % (time.time() - start))
+
 
 # Run with the external predictor
 pred = bpredict.Local2BitPredictor(bytesize)
 runner = bpredict.ExternalRunner(pred, benchmark)
 print('External Local2BitPredictor:')
 run_test(runner)
+
 
 # Run with the internal predictor. The result should be the same.
 pred = '\n'.join([
