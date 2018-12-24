@@ -103,6 +103,12 @@ class SimpleExecContext : public ExecContext {
     // Conditional control instructions;
     Stats::Scalar numCondCtrlInsts;
 
+    // Direct control instructions;
+    Stats::Scalar numDirectCtrlInsts;
+
+    // Indirect control instructions;
+    Stats::Scalar numIndirectCtrlInsts;
+
     // Number of int instructions
     Stats::Scalar numIntInsts;
 

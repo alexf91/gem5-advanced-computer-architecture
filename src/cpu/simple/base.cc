@@ -267,6 +267,16 @@ BaseSimpleCPU::regStats()
             .desc("number of instructions that are conditional controls")
             ;
 
+        t_info.numDirectCtrlInsts
+            .name(thread_str + ".num_direct_control_insts")
+            .desc("number of instructions that are direct controls")
+            ;
+
+        t_info.numIndirectCtrlInsts
+            .name(thread_str + ".num_indirect_control_insts")
+            .desc("number of instructions that are indirect controls")
+            ;
+
         t_info.numIntInsts
             .name(thread_str + ".num_int_insts")
             .desc("number of integer instructions")
@@ -637,6 +647,16 @@ BaseSimpleCPU::postExecute()
     //the number of branch predictions that will be made
     if (curStaticInst->isCondCtrl()){
         t_info.numCondCtrlInsts++;
+    }
+
+    //the number of direct control instructions
+    if (curStaticInst->isDirectCtrl()){
+        t_info.numDirectCtrlInsts++;
+    }
+
+    //the number of indirect control instructions
+    if (curStaticInst->isIndirectCtrl()){
+        t_info.numIndirectCtrlInsts++;
     }
 
     //result bus acceses
