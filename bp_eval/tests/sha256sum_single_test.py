@@ -29,8 +29,8 @@ def run_test(runner):
     start = time.time()
     runner.run()
 
-    predicted = runner.stats.find('condPredicted')[0].values[0]
-    incorrect = runner.stats.find('condIncorrect')[0].values[0]
+    predicted = runner.stats[0].find('condPredicted')[0].values[0]
+    incorrect = runner.stats[0].find('condIncorrect')[0].values[0]
 
     print('    misprediction rate: %f' % (incorrect / predicted))
     print('    runtime: %f' % (time.time() - start))

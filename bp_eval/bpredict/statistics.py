@@ -55,3 +55,8 @@ class Statistics(object):
             return int(s)
         except ValueError:
             return float(s)
+
+    def __iter__(self):
+        for row in self.rows:
+            yield row
+

@@ -29,8 +29,8 @@ def run_benchmark(size):
     runner = bpredict.ExternalRunner(pred, benchmark)
     runner.run()
 
-    predicted = runner.stats.find('condPredicted')[0].values[0]
-    incorrect = runner.stats.find('condIncorrect')[0].values[0]
+    predicted = runner.stats[0].find('condPredicted')[0].values[0]
+    incorrect = runner.stats[0].find('condIncorrect')[0].values[0]
 
     return (incorrect / predicted)
 

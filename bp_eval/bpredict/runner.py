@@ -146,8 +146,12 @@ class ExternalRunner(object):
 
         self.stdout = gemproc.stdout.read().decode()
         self.stderr = gemproc.stderr.read().decode()
+        self.stats = []
         with open(os.path.join(outdir, 'stats.txt')) as fp:
-            self.stats = Statistics(fp.read())
+            for section in fp.read().split('Begin Simulation Statistics'):
+                stats = Statistics(section)
+                if stats.rows:
+                    self.stats.append(stats)
 
         shutil.rmtree(outdir)
 
@@ -201,8 +205,12 @@ class InternalRunner(object):
 
         self.stdout = gemproc.stdout.read().decode()
         self.stderr = gemproc.stderr.read().decode()
+        self.stats = []
         with open(os.path.join(outdir, 'stats.txt')) as fp:
-            self.stats = Statistics(fp.read())
+            for section in fp.read().split('Begin Simulation Statistics'):
+                stats = Statistics(section)
+                if stats.rows:
+                    self.stats.append(stats)
 
         shutil.rmtree(outdir)
 
@@ -258,8 +266,12 @@ class FullSystemRunner(object):
 
         self.stdout = gemproc.stdout.read().decode()
         self.stderr = gemproc.stderr.read().decode()
+        self.stats = []
         with open(os.path.join(outdir, 'stats.txt')) as fp:
-            self.stats = Statistics(fp.read())
+            for section in fp.read().split('Begin Simulation Statistics'):
+                stats = Statistics(section)
+                if stats.rows:
+                    self.stats.append(stats)
         with open(os.path.join(outdir, 'system.terminal')) as fp:
             self.terminal = fp.read()
 
