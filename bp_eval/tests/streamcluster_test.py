@@ -21,12 +21,13 @@ import bpredict
 
 
 benchmark = '../benchmarks/streamcluster/streamcluster'
+args = (10, 20, 3, 100, 100, 100, '/dev/zero', '/dev/null', 1)
 sizes = [256, 512, 1024, 2048, 4096, 8192, 16384]
 
 
 def run_benchmark(size):
     pred = bpredict.Local2BitPredictor(size)
-    runner = bpredict.ExternalRunner(pred, benchmark)
+    runner = bpredict.ExternalRunner(pred, benchmark, args=args)
     runner.run()
 
     predicted = runner.stats[0].find('condPredicted')[0].values[0]
