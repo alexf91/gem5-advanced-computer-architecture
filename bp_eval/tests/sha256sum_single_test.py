@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 import bpredict
 
 
-benchmark = '../benchmarks/sha256sum/sha256sum.alpha'
-args = ('../benchmarks/sha256sum/small.bin', )
+benchmark = '../benchmarks/sha256sum/sha256sum'
+args = ('../benchmarks/sha256sum/inputs/256K.bin', )
 bytesize = 2048
 
 
