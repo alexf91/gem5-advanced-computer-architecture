@@ -29,8 +29,8 @@ from .utils import SaturatingCounter
 
 class Local2BitPredictor(BasePredictor):
     """The number of counters is size_in_bytes * 4"""
-    def __init__(self, size_in_bytes):
-        super(Local2BitPredictor, self).__init__()
+    def __init__(self, size_in_bytes, **kwargs):
+        super(Local2BitPredictor, self).__init__(**kwargs)
 
         ncounters = size_in_bytes * 4
         self._table = [SaturatingCounter(0, 3) for _ in range(ncounters)]

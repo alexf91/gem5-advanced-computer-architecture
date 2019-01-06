@@ -22,10 +22,18 @@ class BasePredictor(object):
     """Base class for all predictors. Manages the branch histories.
     Histories are created when the lookup or uncond_branch is called and
     deleted when squash or update without the squashed flag is called.
+
+    :param record_trace: if set to True, the branch address and taken/not-taken
+        is recorded and can be accessed via the trace property.
     """
-    def __init__(self):
+
+    trace = property(lambda self: self._trace)
+
+    def __init__(self, **kwargs):
         self._histories = dict()
         self._history_cnt = 0
+
+        self._trace = [] if kwargs.get('record_trace', False) else None
 
     def _next_key(self):
         self._history_cnt += 1
@@ -56,6 +64,8 @@ class BasePredictor(object):
                      squashed):
         assert bp_history_index != 0
         bp_history = self._histories[bp_history_index]
+        if self._trace is not None and not squashed:
+            self._trace.append((branch_addr, taken))
         self.update(tid, branch_addr, taken, bp_history, squashed)
         if not squashed:
             del self._histories[bp_history_index]
@@ -65,6 +75,10 @@ class BasePredictor(object):
         bp_history = self._histories[bp_history_index]
         self.squash(tid, bp_history)
         del self._histories[bp_history_index]
+
+    def reset_trace(self):
+        if self.trace is not None:
+            self.trace = []
 
     ###########################################################################
     # The following methods should be overridden.                             #
