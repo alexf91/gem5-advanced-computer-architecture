@@ -15,6 +15,8 @@ wget -nc 'http://fmv.jku.at/picosat/picosat-965.tar.gz'
 wget -nc 'https://ftp.gnu.org/gnu/coreutils/coreutils-8.1.tar.gz'
 wget -nc 'http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-core.tar.gz'
 wget -nc 'https://github.com/official-stockfish/Stockfish/archive/sf_2.3.1.tar.gz'
+wget -nc 'https://www.sjeng.org/ftp/Sjeng-Free-11.2.tar.gz'
+wget -nc 'ftp://ftp.gnu.org/gnu/gdbm/gdbm-1.18.1.tar.gz'
 
 # Build the benchmark applications if they haven't been built before
 export PATH=$TOOLCHAIN_DIR/alphaev67-unknown-linux-gnu/bin:$PATH
@@ -68,4 +70,29 @@ if [ ! -d Stockfish-sf_2.3.1 ]; then
                EXTRALDFLAGS=-static \
                CXX=alphaev67-unknown-linux-gnu-g++ COMP=gcc ARCH=general-64 -j3
     cp stockfish $BENCHMARKS_DIR/stockfish/
+fi
+
+cd $BUILD_DIR
+if [ ! -d Sjeng-Free-11.2 ]; then
+    tar xf "$DOWNLOAD_DIR/Sjeng-Free-11.2.tar.gz" && cd Sjeng-Free-11.2
+    tar xf "$DOWNLOAD_DIR/gdbm-1.18.1.tar.gz" && mv gdbm-1.18.1 gdbm && cd gdbm
+    sed -i -e 's/blksize_t/size_t/g' src/gdbmopen.c
+    ./configure --host=alphaev67-unknown-linux-gnu
+    make -j3
+    mkdir installation
+    make DESTDIR=$PWD/installation install
+
+    cd ..
+    ./configure --host=alphaev67-unknown-linux-gnu
+    sed -i -e 's/#define HAVE_SELECT 1//g' config.h
+    for name in standard bug suicide losers; do
+        sed -i -e "s/\"$name.lrn\"/\"\/dev\/null\"/g" sjeng.c
+    done
+
+    make CC=alphaev67-unknown-linux-gnu-gcc \
+         CXX=alphaev67-unknown-linux-gnu-g++ \
+         LDFLAGS="-L$PWD/gdbm/installation/usr/local/lib" \
+         CFLAGS="-I$PWD/gdbm/installation/usr/local/include -static -O2" \
+         -j3
+    cp sjeng $BENCHMARKS_DIR/sjeng/
 fi

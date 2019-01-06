@@ -53,11 +53,12 @@ class ExternalRunner(object):
     """Benchmark runner for external predictors."""
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, args=None,
+    def __init__(self, predictor, prog, args=None, stdin=None,
                  cputype=CPUType.ATOMIC_SIMPLE_CPU):
         self.predictor = predictor
         self.prog = prog
         self.args = args or tuple()
+        self.stdin = stdin
         self.cputype = cputype
 
         self.stdout = None
@@ -100,9 +101,14 @@ class ExternalRunner(object):
         sockfd.listen(1)
 
         # Start the simulator
+        pipe = None if self.stdin is None else subprocess.PIPE
         env = {'PYTHONPATH': os.path.join(pkgdir, '..', '..', 'configs')}
         gemproc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+                                   stderr=subprocess.PIPE, stdin=pipe)
+
+        if pipe:
+            gemproc.stdin.write(self.stdin.encode())
+            gemproc.stdin.close()
 
         # Accept the connection from the simulator
         connfd, addr = sockfd.accept()
@@ -160,11 +166,12 @@ class InternalRunner(object):
     """Benchmark runner for internal predictors."""
     gem5path = gem5path
 
-    def __init__(self, setup_code, prog, args=None,
+    def __init__(self, setup_code, prog, args=None, stdin=None,
                  cputype=CPUType.ATOMIC_SIMPLE_CPU):
         self.setup_code = setup_code
         self.prog = prog
         self.args = args or tuple()
+        self.stdin = stdin
         self.cputype = cputype
 
         self.stdout = None
@@ -196,9 +203,14 @@ class InternalRunner(object):
         cmd.append(self.setup_code)
 
         # Start the simulator
+        pipe = None if self.stdin is None else subprocess.PIPE
         env = {'PYTHONPATH': os.path.join(pkgdir, '..', '..', 'configs')}
         gemproc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+                                   stderr=subprocess.PIPE, stdin=pipe)
+
+        if pipe:
+            gemproc.stdin.write(self.stdin.encode())
+            gemproc.stdin.close()
 
         # Cleanup
         gemproc.wait()
