@@ -1,25 +1,15 @@
-#
-# Copyright 2018 Alexander Fasching
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+#!/usr/bin/env python
+# coding: utf-8
 
 from bpredict import *
 
 
 def print_stats(runner):
-    assert len(runner.stats) == 3
+    insts_setup = runner.stats[0].find('sim_insts')[0]
+    insts_benchmark = runner.stats[1].find('sim_insts')[0]
+    print('setup_insts:    ', insts_setup.values[0])
+    print('benchmark_insts:',
+            insts_benchmark.values[0] - insts_setup.values[0])
 
     sim_seconds = runner.stats[1].find('sim_seconds')[0]
     direct_ctrl = runner.stats[1].find('num_direct_control_insts')[0]
@@ -32,6 +22,8 @@ def print_stats(runner):
             (direct_ctrl.values[0] + indirect_ctrl.values[0]))
     print()
 
+RUN_INSTS = 100 * 10**6
+
 
 # Run the blackscholes benchmark
 script = '\n'.join([
@@ -40,51 +32,56 @@ script = '\n'.join([
     '/sbin/m5 exit',
 ])
 
+INIT_INSTS = 149648136
 blackscholes_runner = FullSystemRunner(scriptcode=script,
-                                       cputype=CPUType.ATOMIC_SIMPLE_CPU)
+                                       cputype=CPUType.ATOMIC_SIMPLE_CPU,
+                                       maxinsts=INIT_INSTS + RUN_INSTS)
 blackscholes_runner.run()
-print('blackscholes')
 print_stats(blackscholes_runner)
 
 
 # Run the canneal benchmark
 script = '\n'.join([
     'cd /parsec/install/bin',
-    './canneal 1 10000 5 /parsec/install/inputs/canneal/100.nets',
+    # usage: ./canneal NTHREADS NSWAPS TEMP NETLIST [NSTEPS]
+    './canneal 1 10000 2000 /parsec/install/inputs/canneal/100000.nets 32',
     '/sbin/m5 exit',
 ])
 
+INIT_INSTS = 2030400132
 canneal_runner = FullSystemRunner(scriptcode=script,
-                                  cputype=CPUType.ATOMIC_SIMPLE_CPU)
+                                  cputype=CPUType.ATOMIC_SIMPLE_CPU,
+                                  maxinsts=INIT_INSTS + RUN_INSTS)
 canneal_runner.run()
-print('canneal')
 print_stats(canneal_runner)
 
 
 # Run the streamcluster benchmark
 script = '\n'.join([
     'cd /parsec/install/bin',
-    # usage: ./streamcluster k1 k2 d n chunksize clustersize in out nproc
-    './streamcluster 10 20 3 100 100 100 /dev/zero /dev/null 1',
+# usage: ./streamcluster k1 k2 d n chunksize clustersize infile outfile nproc
+    './streamcluster 10 20 32 4096 4096 1000 none /dev/null 1',
     '/sbin/m5 exit',
 ])
 
+INIT_INSTS = 96937392
 streamcluster_runner = FullSystemRunner(scriptcode=script,
-                                        cputype=CPUType.ATOMIC_SIMPLE_CPU)
+                                        cputype=CPUType.ATOMIC_SIMPLE_CPU,
+                                        maxinsts=INIT_INSTS + RUN_INSTS)
 streamcluster_runner.run()
-print('streamcluster')
 print_stats(streamcluster_runner)
 
 
 # Run the dedup benchmark
 script = '\n'.join([
     'cd /parsec/install/bin',
-    './dedup -i /parsec/install/inputs/dedup/test.dat -o /dev/null',
+    './dedup -c -t 1 -i /parsec/install/inputs/dedup/hamlet.dat -o /dev/null',
     '/sbin/m5 exit',
 ])
 
+INIT_INSTS = 105959907
 dedup_runner = FullSystemRunner(scriptcode=script,
-                                cputype=CPUType.ATOMIC_SIMPLE_CPU)
+                                cputype=CPUType.ATOMIC_SIMPLE_CPU,
+                                maxinsts=INIT_INSTS + RUN_INSTS)
 dedup_runner.run()
-print('dedup')
 print_stats(dedup_runner)
