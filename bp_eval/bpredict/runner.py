@@ -53,12 +53,13 @@ class ExternalRunner(object):
     """Benchmark runner for external predictors."""
     gem5path = gem5path
 
-    def __init__(self, predictor, prog, args=None, stdin=None,
+    def __init__(self, predictor, prog, args=None, stdin=None, maxinsts=None,
                  cputype=CPUType.ATOMIC_SIMPLE_CPU):
         self.predictor = predictor
         self.prog = prog
         self.args = args or tuple()
         self.stdin = stdin
+        self.maxinsts = maxinsts
         self.cputype = cputype
 
         self.stdout = None
@@ -86,6 +87,9 @@ class ExternalRunner(object):
         if self.args:
             cmd.append('--options')
             cmd.append(' '.join(map(str, self.args)))
+
+        if self.maxinsts:
+            cmd.extend(['-I', str(self.maxinsts)])
 
         # Append the configuration parameters
         config = '\n'.join([
@@ -166,12 +170,13 @@ class InternalRunner(object):
     """Benchmark runner for internal predictors."""
     gem5path = gem5path
 
-    def __init__(self, setup_code, prog, args=None, stdin=None,
+    def __init__(self, setup_code, prog, args=None, stdin=None, maxinsts=None,
                  cputype=CPUType.ATOMIC_SIMPLE_CPU):
         self.setup_code = setup_code
         self.prog = prog
         self.args = args or tuple()
         self.stdin = stdin
+        self.maxinsts = maxinsts
         self.cputype = cputype
 
         self.stdout = None
@@ -198,6 +203,9 @@ class InternalRunner(object):
         if self.args:
             cmd.append('--options')
             cmd.append(' '.join(map(str, self.args)))
+
+        if self.maxinsts:
+            cmd.extend(['-I', str(self.maxinsts)])
 
         # Append the setup code
         cmd.append(self.setup_code)
@@ -231,9 +239,11 @@ class FullSystemRunner(object):
     """Run a full system without a branch predictor."""
     gem5path = gem5path
 
-    def __init__(self, scriptcode, cputype=CPUType.ATOMIC_SIMPLE_CPU):
+    def __init__(self, scriptcode, cputype=CPUType.ATOMIC_SIMPLE_CPU,
+                 maxinsts=None):
         self.scriptcode = scriptcode
         self.cputype = cputype
+        self.maxinsts = maxinsts
 
         self.stdout = None
         self.stderr = None
@@ -260,6 +270,9 @@ class FullSystemRunner(object):
             raise ValueError('Unknown CPU type')
 
         cmd.extend(['--script', scriptpath])
+
+        if self.maxinsts:
+            cmd.extend(['-I', str(self.maxinsts)])
 
         # Start the simulator
         m5path = '/dist/m5/system:%s/../toolchain/m5_system_2.0b3' % pkgdir
