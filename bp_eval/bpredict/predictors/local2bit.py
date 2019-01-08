@@ -29,6 +29,7 @@ class Local2BitPredictor(BasePredictor):
     def __init__(self, ncounters, **kwargs):
         super(Local2BitPredictor, self).__init__(**kwargs)
 
+        self._ncounters = ncounters
         self._table = [3 for _ in range(ncounters)]
 
     def lookup(self, tid, branch_addr, bp_history):
@@ -47,4 +48,4 @@ class Local2BitPredictor(BasePredictor):
             self._table[index] = max(self._table[index] - 1, 0)
 
     def _get_index(self, branch_addr):
-        return ((branch_addr // 4) % len(self._table))
+        return ((branch_addr // 4) % self._ncounters)

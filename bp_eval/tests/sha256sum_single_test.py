@@ -34,24 +34,38 @@ def run_test(runner):
     print('    runtime: %f' % (time.time() - start))
 
 
-# Run with the external Local2Bit predictor
-pred = bpredict.Local2BitPredictor(2048)
+# Run with the external TwoLevelAdaptive predictor (7168 bit)
+pred = bpredict.TwoLevelAdaptiveTrainingPredictor(512, 10)
+runner = bpredict.ExternalRunner(pred, benchmark, args)
+print('External TwoLevelAdaptiveTrainingPredictor:')
+run_test(runner)
+
+# Run with the external Local2Bit predictor (8192 bit)
+pred = bpredict.Local2BitPredictor(4096)
 runner = bpredict.ExternalRunner(pred, benchmark, args)
 print('External Local2BitPredictor:')
 run_test(runner)
 
-# Run with the perceptron predictor
-pred = bpredict.PerceptronPredictor(256, 32, 48, 64)
+# Run with the perceptron predictor (8064 bit)
+pred = bpredict.PerceptronPredictor(256, 36, 48, 64)
 runner = bpredict.ExternalRunner(pred, benchmark, args)
 print('External PerceptronPredictor:')
 run_test(runner)
 
-# Run with the combining predictor
+# Run with the combining predictor (4096 + 4032 bit)
 pred_a = bpredict.Local2BitPredictor(2048)
-pred_b = bpredict.PerceptronPredictor(256, 32, 48, 64)
+pred_b = bpredict.PerceptronPredictor(256, 18, 48, 64)
 pred = bpredict.Combining2BitPredictor(pred_a, pred_b, 1024, init=3)
 runner = bpredict.ExternalRunner(pred, benchmark, args)
-print('External Combining2BitPredictor:')
+print('External Combining2BitPredictor (4K + 4K + 2K):')
+run_test(runner)
+
+# Run with the combining predictor (8192 + 8064 bit)
+pred_a = bpredict.Local2BitPredictor(4096)
+pred_b = bpredict.PerceptronPredictor(256, 36, 48, 64)
+pred = bpredict.Combining2BitPredictor(pred_a, pred_b, 1024, init=3)
+runner = bpredict.ExternalRunner(pred, benchmark, args)
+print('External Combining2BitPredictor (8K + 8K + 2K):')
 run_test(runner)
 
 
