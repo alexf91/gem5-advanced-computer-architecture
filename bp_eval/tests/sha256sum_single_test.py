@@ -22,8 +22,6 @@ import bpredict
 
 benchmark = '../benchmarks/sha256sum/sha256sum'
 args = ('../benchmarks/sha256sum/inputs/256K.bin', )
-bytesize = 2048
-
 
 def run_test(runner):
     start = time.time()
@@ -36,17 +34,32 @@ def run_test(runner):
     print('    runtime: %f' % (time.time() - start))
 
 
-# Run with the external predictor
-pred = bpredict.Local2BitPredictor(bytesize)
+# Run with the external Local2Bit predictor
+pred = bpredict.Local2BitPredictor(2048)
 runner = bpredict.ExternalRunner(pred, benchmark, args)
 print('External Local2BitPredictor:')
 run_test(runner)
 
+# Run with the perceptron predictor
+pred = bpredict.PerceptronPredictor(256, 32, 48, 64)
+runner = bpredict.ExternalRunner(pred, benchmark, args)
+print('External PerceptronPredictor:')
+run_test(runner)
 
-# Run with the internal predictor. The result should be the same.
+# Run with the combining predictor
+pred_a = bpredict.Local2BitPredictor(2048)
+pred_b = bpredict.PerceptronPredictor(256, 32, 48, 64)
+pred = bpredict.Combining2BitPredictor(pred_a, pred_b, 1024, init=3)
+runner = bpredict.ExternalRunner(pred, benchmark, args)
+print('External Combining2BitPredictor:')
+run_test(runner)
+
+
+# Run with the internal predictor.
 pred = '\n'.join([
         'branchPred = LocalBP()',
-        'branchPred.localPredictorSize = %d' % (bytesize * 8),
+        'branchPred.localPredictorSize = 4096',
+        'branchPred.localCtrBits = 2',
         'root.system.cpu[0].branchPred = branchPred',
     ])
 runner = bpredict.InternalRunner(pred, benchmark, args)

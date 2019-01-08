@@ -19,3 +19,4 @@ from .local2bit import *
 from .perceptron import *
 from .gshare import *
 from .gselect import *
+from .combining2bit import *

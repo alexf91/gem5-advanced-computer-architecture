@@ -66,7 +66,8 @@ class PerceptronPredictor(BasePredictor):
         return self._table[index].predict(self._globalhistory)
 
     def update(self, tid, branch_addr, taken, bp_history, squashed):
-        if squashed:
+        # Ignore the squashed update call or unconditional branches
+        if squashed or not bp_history['conditional']:
             return
 
         index = self._get_index(branch_addr)

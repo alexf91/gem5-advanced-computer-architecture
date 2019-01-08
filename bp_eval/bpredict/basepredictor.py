@@ -15,7 +15,15 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-__all__ = ('BasePredictor', )
+__all__ = ('BasePredictor', 'RecordSettings')
+
+import enum
+
+class RecordSettings(enum.IntEnum):
+    NONE = 0
+    CONDITIONAL = 1
+    UNCONDITIONAL = 2
+    ALL = 3
 
 
 class BasePredictor(object):
@@ -23,8 +31,8 @@ class BasePredictor(object):
     Histories are created when the lookup or uncond_branch is called and
     deleted when squash or update without the squashed flag is called.
 
-    :param record_trace: if set to True, the branch address and taken/not-taken
-        is recorded and can be accessed via the trace property.
+    :param record_trace: the branch address and taken/not-taken is recorded and
+        can be accessed via the trace property.
     """
 
     trace = property(lambda self: self._trace)
@@ -33,7 +41,8 @@ class BasePredictor(object):
         self._histories = dict()
         self._history_cnt = 0
 
-        self._trace = [] if kwargs.get('record_trace', False) else None
+        self._record_trace = kwargs.get('record_trace', 0)
+        self._trace = []
 
     def _next_key(self):
         self._history_cnt += 1
@@ -41,7 +50,7 @@ class BasePredictor(object):
 
     def _base_lookup(self, tid, branch_addr, bp_history_index):
         assert bp_history_index == 0
-        bp_history = dict()
+        bp_history = dict(conditional=True)
         key = self._next_key()
         self._histories[key] = bp_history
         pred = self.lookup(tid, branch_addr, bp_history)
@@ -49,7 +58,7 @@ class BasePredictor(object):
 
     def _base_uncond_branch(self, tid, branch_addr, bp_history_index):
         assert bp_history_index == 0
-        bp_history = dict()
+        bp_history = dict(conditional=False)
         key = self._next_key()
         self._histories[key] = bp_history
         self.uncond_branch(tid, branch_addr, bp_history)
@@ -64,8 +73,15 @@ class BasePredictor(object):
                      squashed):
         assert bp_history_index != 0
         bp_history = self._histories[bp_history_index]
-        if self._trace is not None and not squashed:
-            self._trace.append((branch_addr, taken))
+
+        if not squashed:
+            cond = bp_history['conditional']
+            record_cond = self._record_trace & RecordSettings.CONDITIONAL
+            record_uncond = self._record_trace & RecordSettings.UNCONDITIONAL
+
+            if (cond and record_cond) or (not cond and record_uncond):
+                self._trace.append((branch_addr, taken))
+
         self.update(tid, branch_addr, taken, bp_history, squashed)
         if not squashed:
             del self._histories[bp_history_index]
@@ -77,8 +93,7 @@ class BasePredictor(object):
         del self._histories[bp_history_index]
 
     def reset_trace(self):
-        if self.trace is not None:
-            self.trace = []
+        self.trace = []
 
     ###########################################################################
     # The following methods should be overridden.                             #
