@@ -38,41 +38,42 @@ class BasePredictor(object):
     trace = property(lambda self: self._trace)
 
     def __init__(self, **kwargs):
-        self._histories = dict()
-        self._history_cnt = 0
+        self._base_histories = dict()
+        self._base_history_cnt = 0
 
         self._record_trace = kwargs.get('record_trace', 0)
         self._trace = []
 
     def _next_key(self):
-        self._history_cnt += 1
-        return self._history_cnt
+        self._base_history_cnt += 1
+        return self._base_history_cnt
 
     def _base_lookup(self, tid, branch_addr, bp_history_index):
         assert bp_history_index == 0
-        bp_history = dict(conditional=True)
         key = self._next_key()
-        self._histories[key] = bp_history
+        bp_history = dict(conditional=True, _index=key)
+        self._base_histories[key] = bp_history
         pred = self.lookup(tid, branch_addr, bp_history)
         return pred or False, key
 
     def _base_uncond_branch(self, tid, branch_addr, bp_history_index):
         assert bp_history_index == 0
-        bp_history = dict(conditional=False)
         key = self._next_key()
-        self._histories[key] = bp_history
+        bp_history = dict(conditional=False, _index=key)
+        self._base_histories[key] = bp_history
         self.uncond_branch(tid, branch_addr, bp_history)
         return False, key
 
     def _base_btb_update(self, tid, branch_addr, bp_history_index):
         assert bp_history_index != 0
-        self.btb_update(tid, branch_addr, self._histories[bp_history_index])
+        self.btb_update(tid, branch_addr,
+                        self._base_histories[bp_history_index])
         return False, bp_history_index
 
     def _base_update(self, tid, branch_addr, taken, bp_history_index,
                      squashed):
         assert bp_history_index != 0
-        bp_history = self._histories[bp_history_index]
+        bp_history = self._base_histories[bp_history_index]
 
         if not squashed:
             cond = bp_history['conditional']
@@ -84,13 +85,13 @@ class BasePredictor(object):
 
         self.update(tid, branch_addr, taken, bp_history, squashed)
         if not squashed:
-            del self._histories[bp_history_index]
+            del self._base_histories[bp_history_index]
 
     def _base_squash(self, tid, bp_history_index):
         assert bp_history_index != 0
-        bp_history = self._histories[bp_history_index]
+        bp_history = self._base_histories[bp_history_index]
         self.squash(tid, bp_history)
-        del self._histories[bp_history_index]
+        del self._base_histories[bp_history_index]
 
     def reset_trace(self):
         self.trace = []

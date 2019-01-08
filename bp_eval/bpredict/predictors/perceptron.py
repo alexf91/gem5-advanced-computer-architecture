@@ -51,8 +51,13 @@ class Perceptron(object):
 
 
 class PerceptronPredictor(BasePredictor):
-    """A perceptron predictor that ignores speculative execution."""
-    def __init__(self, nperceptrons, histlength, threshold=1.0, clip=np.infty):
+    """A perceptron predictor with optional support for a speculative history.
+    If speculation is enabled, the predictor tracks its predictions and uses
+    them for further predictions. The weights are only updated when the outcome
+    of a branch is known.
+    """
+    def __init__(self, nperceptrons, histlength, threshold=1.0, clip=np.infty,
+                 speculative=False):
         super(PerceptronPredictor, self).__init__()
         self._nperceptrons = nperceptrons
         self._histlength = histlength
@@ -61,9 +66,39 @@ class PerceptronPredictor(BasePredictor):
         self._table = [Perceptron(histlength, threshold=threshold, clip=clip)
                             for _ in range(nperceptrons)]
 
+        # The predictor tracks predictions not yet commited (update not called)
+        # and bases speculative predictions based on this temporary history.
+        # Assume that the speculative history is unbounded for simplicity.
+        self._speculative = speculative
+        self._spechistory = []
+
     def lookup(self, tid, branch_addr, bp_history):
         index = self._get_index(branch_addr)
-        return self._table[index].predict(self._globalhistory)
+
+        hist = self._globalhistory
+        if self._speculative:
+            temphist = np.concatenate((self._globalhistory, self._spechistory))
+            hist = temphist[-self._histlength:]
+
+        p =  self._table[index].predict(hist)
+
+        if self._speculative:
+            self._spechistory.append(1 if p else -1)
+
+        return p
+
+    def btb_update(self, tid, branch_addr, bp_history):
+        """Set the outcome of the last speculative prediction to not taken."""
+        if bp_history['conditional'] and self._speculative:
+            self._spechistory[-1] = -1
+
+    def squash(self, tid, bp_history):
+        """Squashing starts at the tip of the current path, so we remove the
+        last element from the speculative history.
+        """
+        # TODO: This is only called for the MinorCPU?
+        if bp_history['conditional'] and self._speculative:
+            self._spechistory.pop()
 
     def update(self, tid, branch_addr, taken, bp_history, squashed):
         # Ignore the squashed update call or unconditional branches
@@ -73,6 +108,9 @@ class PerceptronPredictor(BasePredictor):
         index = self._get_index(branch_addr)
         t = 1 if taken else -1
         self._table[index].update(self._globalhistory, t)
+
+        if self._speculative:
+            self._spechistory.pop(0)
 
         self._globalhistory = np.roll(self._globalhistory, -1)
         self._globalhistory[-1] = t
