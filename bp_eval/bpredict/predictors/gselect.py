@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Alexander Fasching
+# Copyright 2019 Alexander Fasching
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,29 +15,28 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""
-Sample implementation of the local 2-bit predictor provided by gem5.
-"""
+__all__ = ('GSelectPredictor', )
 
-__all__ = ('Local2BitPredictor', )
-
-import hashlib
-
-from .basepredictor import BasePredictor
-from .utils import SaturatingCounter
+from ..basepredictor import BasePredictor
 
 
-class Local2BitPredictor(BasePredictor):
-    """The number of counters is size_in_bytes * 4"""
-    def __init__(self, size_in_bytes, **kwargs):
-        super(Local2BitPredictor, self).__init__(**kwargs)
+class GSelectPredictor(BasePredictor):
+    """2-bit counters indexed the concatenated PC and GH."""
+    def __init__(self, histlength, addrlength, **kwargs):
+        super(GSelectPredictor, self).__init__(**kwargs)
 
-        ncounters = size_in_bytes * 4
-        self._table = [SaturatingCounter(0, 3) for _ in range(ncounters)]
+        self._histlength = histlength
+        self._addrlength = addrlength
+
+        self._histmask = 2**histlength - 1
+        self._addrmask = 2**addrlength - 1
+
+        self._table = [3 for _ in range(2**(histlength + addrlength))]
+        self._ghr = 0
 
     def lookup(self, tid, branch_addr, bp_history):
         index = self._get_index(branch_addr)
-        return self._table[index].value >= 2
+        return self._table[index] >= 2
 
     def update(self, tid, branch_addr, taken, bp_history, squashed):
         if squashed:
@@ -45,9 +44,12 @@ class Local2BitPredictor(BasePredictor):
 
         index = self._get_index(branch_addr)
         if taken:
-            self._table[index].increment()
+            self._table[index] = min(self._table[index] + 1, 3)
         else:
-            self._table[index].decrement()
+            self._table[index] = max(self._table[index] - 1, 0)
+
+        self._ghr = ((self._ghr << 1) | taken) & self._histmask
 
     def _get_index(self, branch_addr):
-        return ((branch_addr // 4) % len(self._table))
+        addrbits = (branch_addr >> 2) & self._addrmask
+        return (addrbits << self._histlength) | self._ghr

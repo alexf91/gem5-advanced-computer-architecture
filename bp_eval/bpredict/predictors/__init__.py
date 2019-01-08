@@ -15,8 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .runner import *
-from .basepredictor import *
-from .utils import *
-from .statistics import *
-from .predictors import *
+from .local2bit import *
+from .perceptron import *
+from .gshare import *
+from .gselect import *
