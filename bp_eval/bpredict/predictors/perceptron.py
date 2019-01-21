@@ -58,8 +58,8 @@ class PerceptronPredictor(BasePredictor):
     of a branch is known.
     """
     def __init__(self, nperceptrons, histlength, threshold=1.0, clip=np.infty,
-                 speculative=False):
-        super(PerceptronPredictor, self).__init__()
+                 speculative=False, **kwargs):
+        super(PerceptronPredictor, self).__init__(**kwargs)
         self._nperceptrons = nperceptrons
         self._histlength = histlength
         self._global_history = np.zeros(histlength)
@@ -128,8 +128,8 @@ class LocalPerceptronPredictor(BasePredictor):
     of a branch is known.
     """
     def __init__(self, nperceptrons, histlength, threshold=1.0, clip=np.infty,
-                 speculative=False):
-        super(LocalPerceptronPredictor, self).__init__()
+                 speculative=False, **kwargs):
+        super(LocalPerceptronPredictor, self).__init__(**kwargs)
         self._nperceptrons = nperceptrons
         self._histlength = histlength
         self._histories = [np.zeros(histlength) for _ in range(nperceptrons)]
@@ -201,8 +201,8 @@ class CombinedPerceptronPredictor(BasePredictor):
     of a branch is known.
     """
     def __init__(self, nperceptrons, local_histlength, global_histlength,
-            threshold=1.0, clip=np.infty, speculative=False):
-        super(CombinedPerceptronPredictor, self).__init__()
+            threshold=1.0, clip=np.infty, speculative=False, **kwargs):
+        super(CombinedPerceptronPredictor, self).__init__(**kwargs)
         self._nperceptrons = nperceptrons
         self._local_histlength = local_histlength
         self._global_histlength = global_histlength

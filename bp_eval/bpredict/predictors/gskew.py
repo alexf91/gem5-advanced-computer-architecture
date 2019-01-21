@@ -62,17 +62,38 @@ class GSkewPredictor(BasePredictor):
         self._tables = [[3 for _ in range(2**histlength)] for _ in hash_fncs]
         self._ghr = 0
         self._mask = 2**histlength - 1
+        self._spec_history = []
 
     def lookup(self, tid, branch_addr, bp_history):
+
+        n = len(self._spec_history)
+        th = sum(2**(n - i - 1) * t for i, t in enumerate(self._spec_history))
+        ghr = ((self._ghr << n) | th) & self._mask
+
         predictions = []
         for i, hash_fnc in enumerate(self._hash_fncs):
-            index = hash_fnc(branch_addr & self._mask, self._ghr)
+            index = hash_fnc(branch_addr & self._mask, ghr)
             predictions.append(self._tables[i][index] >= 2)
 
-        return sum(predictions) >= self._npreds / 2
+        p = sum(predictions) >= self._npreds / 2
+        self._spec_history.append(p)
+        return p
+
+    def btb_update(self, tid, branch_addr, bp_history):
+        """Set the outcome of the last speculative prediction to not taken."""
+        if bp_history['conditional']:
+            self._spec_history[-1] = 0
+
+    def squash(self, tid, bp_history):
+        """Squashing starts at the tip of the current path, so we remove the
+        last element from the speculative history.
+        """
+        # TODO: This is only called for the MinorCPU?
+        if bp_history['conditional']:
+            self._spec_history.pop()
 
     def update(self, tid, branch_addr, taken, bp_history, squashed):
-        if squashed:
+        if squashed or not bp_history['conditional']:
             return
 
         for i, hash_fnc in enumerate(self._hash_fncs):
@@ -81,5 +102,7 @@ class GSkewPredictor(BasePredictor):
                 self._tables[i][index] = min(self._tables[i][index] + 1, 3)
             else:
                 self._tables[i][index] = max(self._tables[i][index] - 1, 0)
+
+        self._spec_history.pop(0)
 
         self._ghr = ((self._ghr << 1) | taken) & self._mask
