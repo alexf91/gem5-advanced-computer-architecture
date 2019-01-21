@@ -54,6 +54,7 @@ class BasePredictor(object):
         bp_history = dict(conditional=True, _index=key)
         self._base_histories[key] = bp_history
         pred = self.lookup(tid, branch_addr, bp_history)
+        bp_history['_prediction'] = pred
         return pred or False, key
 
     def _base_uncond_branch(self, tid, branch_addr, bp_history_index):
@@ -81,7 +82,8 @@ class BasePredictor(object):
             record_uncond = self._record_trace & RecordSettings.UNCONDITIONAL
 
             if (cond and record_cond) or (not cond and record_uncond):
-                self._trace.append((branch_addr, taken))
+                pred = bp_history.get('_prediction', 1)
+                self._trace.append((branch_addr, taken, int(pred)))
 
         self.update(tid, branch_addr, taken, bp_history, squashed)
         if not squashed:
