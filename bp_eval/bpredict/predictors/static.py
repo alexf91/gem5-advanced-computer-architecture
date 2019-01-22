@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Alexander Fasching
+# Copyright 2019 Alexander Fasching
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,12 +15,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .local2bit import *
-from .perceptron import *
-from .gshare import *
-from .gselect import *
-from .combining2bit import *
-from .twoleveladaptive import *
-from .gskew import *
-from .static import *
-from .multihybrid import *
+__all__ = ('StaticPredictor', )
+
+from ..basepredictor import BasePredictor
+
+
+class StaticPredictor(BasePredictor):
+    """Static taken or not-taken predictor."""
+    def __init__(self, taken, **kwargs):
+        super(StaticPredictor, self).__init__(**kwargs)
+
+        self._taken = taken
+
+    def lookup(self, tid, branch_addr, bp_history):
+        return self._taken
