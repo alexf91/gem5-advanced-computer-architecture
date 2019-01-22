@@ -45,7 +45,7 @@ class BasePredictor(object):
         self._trace = []
 
     def _next_key(self):
-        self._base_history_cnt += 1
+        self._base_history_cnt = (self._base_history_cnt & 0xFFFF) + 1
         return self._base_history_cnt
 
     def _base_lookup(self, tid, branch_addr, bp_history_index):
