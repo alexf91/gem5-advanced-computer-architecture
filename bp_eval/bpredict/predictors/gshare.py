@@ -28,14 +28,30 @@ class GSharePredictor(BasePredictor):
         self._histlength = histlength
         self._table = [3 for _ in range(2**histlength)]
         self._ghr = 0
+        self._spec = []
         self._mask = 2**histlength - 1
 
     def lookup(self, tid, branch_addr, bp_history):
-        index = self._get_index(branch_addr)
-        return self._table[index] >= 2
+        index = self._get_spec_index(branch_addr)
+        p = self._table[index] >= 2
+        self._spec.append(p)
+        return p
+
+    def btb_update(self, tid, branch_addr, bp_history):
+        """Set the outcome of the last speculative prediction to not taken."""
+        if bp_history['conditional']:
+            self._spec[-1] = 0
+
+    def squash(self, tid, bp_history):
+        """Squashing starts at the tip of the current path, so we remove the
+        last element from the speculative history.
+        """
+        # TODO: This is only called for the MinorCPU?
+        if bp_history['conditional']:
+            self._spec.pop()
 
     def update(self, tid, branch_addr, taken, bp_history, squashed):
-        if squashed:
+        if squashed or not bp_history['conditional']:
             return
 
         index = self._get_index(branch_addr)
@@ -45,6 +61,13 @@ class GSharePredictor(BasePredictor):
             self._table[index] = max(self._table[index] - 1, 0)
 
         self._ghr = ((self._ghr << 1) | taken) & self._mask
+        self._spec.pop(0)
 
     def _get_index(self, branch_addr):
         return ((branch_addr // 4) ^ self._ghr) & self._mask
+
+    def _get_spec_index(self, branch_addr):
+        n = len(self._spec)
+        th = sum(2**(n - i - 1) * t for i, t in enumerate(self._spec))
+        ghr = ((self._ghr << n) | th) & self._mask
+        return ((branch_addr // 4) ^ ghr) & self._mask
